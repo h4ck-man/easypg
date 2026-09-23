@@ -3,6 +3,9 @@ export default defineConfig({
   testDir: "tests/e2e",
   fullyParallel: false,
   workers: 1,
+  // Live-mode tests start a cold Vite compiler on a fresh CI runner.
+  timeout: 60000,
+  expect: { timeout: 20000 },
   use: {
     baseURL: "http://127.0.0.1:5180",
     screenshot: "only-on-failure",
