@@ -1,18 +1,19 @@
 <script lang="ts">
   import type { PageData } from './$types';
   import { enhance } from '$lib/api/forms';
-  import { Badge, Button, Card } from '@astryx-svelte/core';
+  import PropertyLink from '$lib/components/portals/PropertyLink.svelte';
+  import { Badge, Banner, Button, Card } from '@astryx-svelte/core';
   import { sx } from '$lib/design/attrs';
   import { styles } from './page.stylex';
   import Home from '@lucide/svelte/icons/home';
   import MapPin from '@lucide/svelte/icons/map-pin';
   import Check from '@lucide/svelte/icons/check';
-  import BedDouble from '@lucide/svelte/icons/bed-double';
-  import Users from '@lucide/svelte/icons/users';
   import Search from '@lucide/svelte/icons/search';
   import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
 
   let { data }: { data: PageData } = $props();
+  let switching = $state(false);
+  let switchError = $state('');
   let searchQuery = $state('');
   let filteredHostels = $derived(
     data.hostels.filter((hostel) => {
@@ -53,6 +54,7 @@
     </div>
   </div>
 
+  {#if switchError}<Banner status="error" title="Could not switch hostel" description={switchError} />{/if}
   {#if filteredHostels.length === 0}
     <Card xstyle={styles.emptyCard}>
       <Home size={40} {...sx(styles.emptyIcon)} />
@@ -135,33 +137,33 @@
               <div {...sx(styles.currentProperty)}>
                 <CheckCircle2 size={16} /><span>Currently Active Property</span>
               </div>
-            {:else}
-              <form method="POST" data-operation="switchHostel" use:enhance {...sx(styles.fullWidth)}>
+            {:else if data.scope.role !== 'platform_admin'}
+              <form method="POST" data-operation="switchHostel" use:enhance={() => {
+                switching = true;
+                switchError = '';
+                return async ({ result, update }) => {
+                  try {
+                    if (result.type === 'failure') switchError = result.data.error ?? 'Try again.';
+                    if (result.type === 'success') await update();
+                  } finally { switching = false; }
+                };
+              }} {...sx(styles.fullWidth)}>
                 <input type="hidden" name="hostelId" value={hostel.id} />
                 <Button
-                  label="Make Active"
+                  label={switching ? 'Switching…' : 'Make Active'}
+                  isDisabled={switching}
                   type="submit"
                   variant="primary"
                   xstyle={styles.fullButton}>{#snippet icon()}<Check size={16} />{/snippet}</Button
                 >
               </form>
             {/if}
-            <div {...sx(styles.linkGrid)}>
-              <Button
-                label="View Rooms"
-                href="/rooms"
-                variant="secondary"
-                size="sm"
-                xstyle={styles.fullButton}>{#snippet icon()}<BedDouble size={15} />{/snippet}</Button
-              >
-              <Button
-                label="Residents"
-                href="/residents"
-                variant="secondary"
-                size="sm"
-                xstyle={styles.fullButton}>{#snippet icon()}<Users size={15} />{/snippet}</Button
-              >
-            </div>
+            {#if data.scope.role !== 'platform_admin'}
+              <div {...sx(styles.linkGrid)}>
+                <PropertyLink hostelId={hostel.id} activeHostelId={data.scope.activeHostelId} href="/rooms" label="View Rooms" />
+                <PropertyLink hostelId={hostel.id} activeHostelId={data.scope.activeHostelId} href="/residents" label="Residents" />
+              </div>
+            {/if}
           </div>
         </Card>
       {/each}

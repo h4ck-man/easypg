@@ -6,6 +6,30 @@
       "PageDataMap": {
         "type": "object",
         "properties": {
+          "/supervisor": {
+            "$ref": "#/definitions/PortalDashboardData"
+          },
+          "/owner": {
+            "$ref": "#/definitions/PortalDashboardData"
+          },
+          "/portfolio": {
+            "$ref": "#/definitions/PortalDashboardData"
+          },
+          "/admin": {
+            "$ref": "#/definitions/PortalDashboardData"
+          },
+          "/leaving-soon": {
+            "$ref": "#/definitions/LeavingSoonPage"
+          },
+          "/attention": {
+            "$ref": "#/definitions/AttentionPage"
+          },
+          "/inquiries": {
+            "$ref": "#/definitions/InquiriesPage"
+          },
+          "/setup": {
+            "$ref": "#/definitions/SetupPage"
+          },
           "/dashboard": {
             "type": "object",
             "properties": {
@@ -556,6 +580,14 @@
           }
         },
         "required": [
+          "/supervisor",
+          "/owner",
+          "/portfolio",
+          "/admin",
+          "/leaving-soon",
+          "/attention",
+          "/inquiries",
+          "/setup",
           "/dashboard",
           "/organizations",
           "/hostels",
@@ -571,11 +603,758 @@
           "/login"
         ]
       },
+      "PortalDashboardData": {
+        "type": "object",
+        "properties": {
+          "portal": {
+            "$ref": "#/definitions/PortalKind"
+          },
+          "title": {
+            "type": "string"
+          },
+          "subtitle": {
+            "type": "string"
+          },
+          "hostels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/HostelSummary"
+            }
+          },
+          "organizations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Organization"
+            }
+          },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "hostelCount": {
+                "type": "number"
+              },
+              "residentCount": {
+                "type": "number"
+              },
+              "availableBeds": {
+                "type": "number"
+              },
+              "leavingSoonCount": {
+                "type": "number"
+              },
+              "overdueFollowUps": {
+                "type": "number"
+              },
+              "outstandingPaise": {
+                "type": "string",
+                "pattern": "^-?[0-9]+$",
+                "description": "Integer paise as a decimal string; never floating point rupees."
+              }
+            },
+            "required": [
+              "hostelCount",
+              "residentCount",
+              "availableBeds",
+              "leavingSoonCount",
+              "overdueFollowUps",
+              "outstandingPaise"
+            ]
+          },
+          "attention": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/LeavingSoonItem"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "totalHostels": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "portal",
+          "title",
+          "subtitle",
+          "hostels",
+          "organizations",
+          "stats",
+          "attention",
+          "page",
+          "pageSize",
+          "totalHostels"
+        ]
+      },
+      "PortalKind": {
+        "type": "string",
+        "enum": [
+          "supervisor",
+          "owner",
+          "portfolio",
+          "admin"
+        ]
+      },
+      "HostelSummary": {
+        "type": "object",
+        "properties": {
+          "physicalBeds": {
+            "type": "number"
+          },
+          "sellableBeds": {
+            "type": "number"
+          },
+          "occupiedBeds": {
+            "type": "number"
+          },
+          "availableBeds": {
+            "type": "number"
+          },
+          "occupancyRate": {
+            "type": "number"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "addressLine1": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive"
+            ]
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "genderPolicy": {
+            "$ref": "#/definitions/GenderPolicy"
+          },
+          "reminderDays": {
+            "type": "number"
+          },
+          "residentCount": {
+            "type": "number"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "addressLine1",
+          "availableBeds",
+          "city",
+          "code",
+          "id",
+          "isActive",
+          "name",
+          "occupancyRate",
+          "occupiedBeds",
+          "organizationId",
+          "physicalBeds",
+          "residentCount",
+          "sellableBeds",
+          "status",
+          "timezone"
+        ]
+      },
+      "GenderPolicy": {
+        "type": "string",
+        "enum": [
+          "male",
+          "female",
+          "unspecified"
+        ]
+      },
+      "Organization": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "hostelCount": {
+            "type": "number"
+          },
+          "residentCount": {
+            "type": "number"
+          },
+          "billedPaise": {
+            "type": "string",
+            "pattern": "^-?[0-9]+$",
+            "description": "Integer paise as a decimal string; never floating point rupees."
+          },
+          "outstandingPaise": {
+            "type": "string",
+            "pattern": "^-?[0-9]+$",
+            "description": "Integer paise as a decimal string; never floating point rupees."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "status",
+          "createdAt",
+          "hostelCount",
+          "residentCount",
+          "billedPaise",
+          "outstandingPaise"
+        ]
+      },
+      "LeavingSoonItem": {
+        "type": "object",
+        "properties": {
+          "hostelId": {
+            "type": "string"
+          },
+          "hostelName": {
+            "type": "string"
+          },
+          "residentId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "roomNumber": {
+            "type": "string"
+          },
+          "bedLabel": {
+            "type": "string"
+          },
+          "agreementId": {
+            "type": "string"
+          },
+          "stayKind": {
+            "$ref": "#/definitions/StayKind"
+          },
+          "expectedEndDate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "departureIntent": {
+            "$ref": "#/definitions/DepartureIntent"
+          },
+          "followUpDate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lastContactedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "type": "string"
+          },
+          "version": {
+            "type": "number"
+          },
+          "daysUntilDeparture": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "needsFollowUp": {
+            "type": "boolean"
+          },
+          "outstandingPaise": {
+            "type": "string",
+            "pattern": "^-?[0-9]+$",
+            "description": "Integer paise as a decimal string; never floating point rupees."
+          }
+        },
+        "required": [
+          "hostelId",
+          "hostelName",
+          "residentId",
+          "name",
+          "phone",
+          "roomNumber",
+          "bedLabel",
+          "agreementId",
+          "stayKind",
+          "expectedEndDate",
+          "departureIntent",
+          "followUpDate",
+          "lastContactedAt",
+          "notes",
+          "version",
+          "daysUntilDeparture",
+          "needsFollowUp",
+          "outstandingPaise"
+        ]
+      },
+      "StayKind": {
+        "type": "string",
+        "enum": [
+          "short",
+          "long"
+        ]
+      },
+      "DepartureIntent": {
+        "type": "string",
+        "enum": [
+          "tentative",
+          "confirmed",
+          "unknown"
+        ]
+      },
+      "LeavingSoonPage": {
+        "type": "object",
+        "properties": {
+          "hostel": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Hostel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reminderDays": {
+            "type": "number"
+          },
+          "today": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/LeavingSoonItem"
+            }
+          },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "dueForFollowUp": {
+                "type": "number"
+              },
+              "leavingThisWeek": {
+                "type": "number"
+              },
+              "overduePlans": {
+                "type": "number"
+              },
+              "outstandingPaise": {
+                "type": "string",
+                "pattern": "^-?[0-9]+$",
+                "description": "Integer paise as a decimal string; never floating point rupees."
+              }
+            },
+            "required": [
+              "dueForFollowUp",
+              "leavingThisWeek",
+              "overduePlans",
+              "outstandingPaise"
+            ]
+          }
+        },
+        "required": [
+          "hostel",
+          "reminderDays",
+          "today",
+          "items",
+          "stats"
+        ]
+      },
+      "Hostel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "addressLine1": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive"
+            ]
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "genderPolicy": {
+            "$ref": "#/definitions/GenderPolicy"
+          },
+          "reminderDays": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "addressLine1",
+          "city",
+          "code",
+          "id",
+          "name",
+          "organizationId",
+          "status",
+          "timezone"
+        ]
+      },
+      "AttentionPage": {
+        "type": "object",
+        "properties": {
+          "leavingSoon": {
+            "type": "number"
+          },
+          "overduePlans": {
+            "type": "number"
+          },
+          "dueFollowUps": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "leavingSoon",
+          "overduePlans",
+          "dueFollowUps"
+        ]
+      },
+      "InquiriesPage": {
+        "type": "object",
+        "properties": {
+          "hostel": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Hostel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Inquiry"
+            }
+          },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "open": {
+                "type": "number"
+              },
+              "followUpsDue": {
+                "type": "number"
+              },
+              "availableBeds": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "open",
+              "followUpsDue",
+              "availableBeds"
+            ]
+          }
+        },
+        "required": [
+          "hostel",
+          "items",
+          "stats"
+        ]
+      },
+      "Inquiry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "contactName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "phone",
+              "walk_in"
+            ]
+          },
+          "partySize": {
+            "type": "number"
+          },
+          "stayKind": {
+            "$ref": "#/definitions/StayKind"
+          },
+          "acPreference": {
+            "type": "string",
+            "enum": [
+              "any",
+              "ac",
+              "non_ac"
+            ]
+          },
+          "sharingPreference": {
+            "type": "string",
+            "enum": [
+              "any",
+              "1",
+              "2",
+              "3",
+              "4",
+              "private"
+            ]
+          },
+          "expectedArrival": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expectedDeparture": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "followUpDate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "notes": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "contacted",
+              "closed"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "contactName",
+          "phone",
+          "source",
+          "partySize",
+          "stayKind",
+          "acPreference",
+          "sharingPreference",
+          "expectedArrival",
+          "expectedDeparture",
+          "followUpDate",
+          "notes",
+          "status",
+          "createdAt",
+          "version"
+        ]
+      },
+      "SetupPage": {
+        "type": "object",
+        "properties": {
+          "organizations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Organization"
+            }
+          },
+          "hostels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/HostelSummary"
+            }
+          },
+          "staff": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Manager"
+            }
+          },
+          "allowedRoles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Role"
+            }
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "canCreateOrganization": {
+                "type": "boolean"
+              },
+              "canCreateHostel": {
+                "type": "boolean"
+              },
+              "canManageStaff": {
+                "type": "boolean"
+              },
+              "canConfigureInventory": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "canCreateOrganization",
+              "canCreateHostel",
+              "canManageStaff",
+              "canConfigureInventory"
+            ]
+          }
+        },
+        "required": [
+          "organizations",
+          "hostels",
+          "staff",
+          "allowedRoles",
+          "capabilities"
+        ]
+      },
+      "Manager": {
+        "type": "object",
+        "properties": {
+          "bindingId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/definitions/Role"
+          },
+          "organizationId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hostelId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "canManage": {
+            "type": "boolean"
+          },
+          "hostelName": {
+            "type": "string"
+          },
+          "orgName": {
+            "type": "string"
+          },
+          "assignedHostelIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "bindingId",
+          "userId",
+          "name",
+          "email",
+          "role",
+          "organizationId",
+          "hostelId",
+          "isActive",
+          "createdAt",
+          "canManage",
+          "hostelName",
+          "orgName"
+        ]
+      },
       "Role": {
         "type": "string",
         "enum": [
           "platform_admin",
           "organization_admin",
+          "property_owner",
           "manager",
           "resident"
         ],
@@ -901,234 +1680,6 @@
           "metadata"
         ]
       },
-      "Organization": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "slug": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "active",
-              "inactive"
-            ]
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "hostelCount": {
-            "type": "number"
-          },
-          "residentCount": {
-            "type": "number"
-          },
-          "billedPaise": {
-            "type": "string",
-            "pattern": "^-?[0-9]+$",
-            "description": "Integer paise as a decimal string; never floating point rupees."
-          },
-          "outstandingPaise": {
-            "type": "string",
-            "pattern": "^-?[0-9]+$",
-            "description": "Integer paise as a decimal string; never floating point rupees."
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "slug",
-          "status",
-          "createdAt",
-          "hostelCount",
-          "residentCount",
-          "billedPaise",
-          "outstandingPaise"
-        ]
-      },
-      "HostelSummary": {
-        "type": "object",
-        "properties": {
-          "physicalBeds": {
-            "type": "number"
-          },
-          "sellableBeds": {
-            "type": "number"
-          },
-          "occupiedBeds": {
-            "type": "number"
-          },
-          "availableBeds": {
-            "type": "number"
-          },
-          "occupancyRate": {
-            "type": "number"
-          },
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "code": {
-            "type": "string"
-          },
-          "organizationId": {
-            "type": "string"
-          },
-          "city": {
-            "type": "string"
-          },
-          "addressLine1": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "active",
-              "inactive"
-            ]
-          },
-          "timezone": {
-            "type": "string"
-          },
-          "residentCount": {
-            "type": "number"
-          },
-          "isActive": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "addressLine1",
-          "availableBeds",
-          "city",
-          "code",
-          "id",
-          "isActive",
-          "name",
-          "occupancyRate",
-          "occupiedBeds",
-          "organizationId",
-          "physicalBeds",
-          "residentCount",
-          "sellableBeds",
-          "status",
-          "timezone"
-        ]
-      },
-      "Manager": {
-        "type": "object",
-        "properties": {
-          "bindingId": {
-            "type": "string"
-          },
-          "userId": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string"
-          },
-          "role": {
-            "$ref": "#/definitions/Role"
-          },
-          "organizationId": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "hostelId": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "isActive": {
-            "type": "boolean"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "canManage": {
-            "type": "boolean"
-          },
-          "hostelName": {
-            "type": "string"
-          },
-          "orgName": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "bindingId",
-          "userId",
-          "name",
-          "email",
-          "role",
-          "organizationId",
-          "hostelId",
-          "isActive",
-          "createdAt",
-          "canManage",
-          "hostelName",
-          "orgName"
-        ]
-      },
-      "Hostel": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "code": {
-            "type": "string"
-          },
-          "organizationId": {
-            "type": "string"
-          },
-          "city": {
-            "type": "string"
-          },
-          "addressLine1": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "active",
-              "inactive"
-            ]
-          },
-          "timezone": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "addressLine1",
-          "city",
-          "code",
-          "id",
-          "name",
-          "organizationId",
-          "status",
-          "timezone"
-        ]
-      },
       "FloorGroup": {
         "type": "object",
         "properties": {
@@ -1406,6 +1957,7 @@
       "ResidentStatus": {
         "type": "string",
         "enum": [
+          "registered",
           "active",
           "checked_out",
           "inactive"
@@ -1532,6 +2084,18 @@
           },
           "startDate": {
             "type": "string"
+          },
+          "portraitUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "identityDocumentUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "emergencyContactName": {
             "type": [
@@ -1670,6 +2234,42 @@
             ]
           },
           "noticePeriodDays": {
+            "type": "number"
+          },
+          "stayKind": {
+            "$ref": "#/definitions/StayKind"
+          },
+          "billingPeriod": {
+            "type": "string",
+            "enum": [
+              "day",
+              "month"
+            ]
+          },
+          "departureIntent": {
+            "$ref": "#/definitions/DepartureIntent"
+          },
+          "followUpDate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lastContactedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "departureNotes": {
+            "type": "string"
+          },
+          "version": {
             "type": "number"
           }
         },
@@ -1858,6 +2458,13 @@
             "type": "string",
             "pattern": "^-?[0-9]+$",
             "description": "Integer paise as a decimal string; never floating point rupees."
+          },
+          "billingPeriod": {
+            "type": "string",
+            "enum": [
+              "day",
+              "month"
+            ]
           }
         },
         "required": [
@@ -2189,6 +2796,15 @@
             "items": {
               "$ref": "#/definitions/HostelOption"
             }
+          },
+          "memberships": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/MembershipOption"
+            }
+          },
+          "activeMembershipId": {
+            "type": "string"
           }
         },
         "required": [
@@ -2264,6 +2880,7 @@
         "enum": [
           "platform_admin",
           "organization_admin",
+          "property_owner",
           "manager",
           "resident"
         ],
@@ -2286,6 +2903,45 @@
           "id",
           "name",
           "code"
+        ]
+      },
+      "MembershipOption": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/definitions/Role"
+          },
+          "organizationId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "organizationName": {
+            "type": "string"
+          },
+          "portal": {
+            "$ref": "#/definitions/PortalKind"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "organizationId",
+          "organizationName",
+          "portal"
+        ]
+      },
+      "PortalKind": {
+        "type": "string",
+        "enum": [
+          "supervisor",
+          "owner",
+          "portfolio",
+          "admin"
         ]
       }
     }

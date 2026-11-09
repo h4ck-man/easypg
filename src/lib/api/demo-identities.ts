@@ -6,6 +6,11 @@ export const DEMO_ACCOUNTS = [
     desc: "Rooms, residents, arrivals and payments",
   },
   {
+    label: "Demo Hostel Owner",
+    email: "hostelowner@example.invalid",
+    desc: "Read-only overview of assigned hostels",
+  },
+  {
     label: "Demo Owner",
     email: "owner@example.invalid",
     desc: "Property portfolio and staff screens",

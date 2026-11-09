@@ -15,7 +15,7 @@
   import { tableLayout } from '$lib/design/table.stylex';
   import { styles } from './page.stylex';
   import { formatPaise } from '$lib/formatters/money';
-  import { formatDate } from '$lib/formatters/date';
+  import { formatDate, todayInAppTimezone } from '$lib/formatters/date';
   import LogOut from '@lucide/svelte/icons/log-out';
   import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
   import AlertCircle from '@lucide/svelte/icons/alert-circle';
@@ -32,16 +32,6 @@
   let checkoutNotes = $state('');
   let isSubmitting = $state(false);
 
-  function todayInAppTimezone() {
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Kolkata',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    }).formatToParts(new Date());
-    const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
-    return `${values.year}-${values.month}-${values.day}`;
-  }
 
   let checkoutDate = $state(todayInAppTimezone());
 
@@ -286,7 +276,7 @@
         <div>
           <label {...sx(styles.dateField)}>
             <span {...sx(styles.dateLabel)}>Check-Out Date · Required</span>
-            <input type="date" name="checkOutDate" bind:value={checkoutDate} required {...sx(styles.dateInput)} />
+            <input type="date" name="checkOutDate" max={todayInAppTimezone()} bind:value={checkoutDate} required {...sx(styles.dateInput)} />
           </label>
         </div>
         <TextArea

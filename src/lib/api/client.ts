@@ -16,6 +16,17 @@ const demo =
   config.mode === "demo"
     ? import("./demo").then((module) => module.createDemoAdapter())
     : null;
+/** The API owns image authorization; only use the resident-specific documented paths. */
+export function residentImageUrl(
+  id: string,
+  kind: "portrait" | "identity",
+  path?: string | null,
+): string | undefined {
+  const resource = `/residents/${encodeURIComponent(id)}/images/${kind}`;
+  return config.mode === "live" && path === `/api/v1${resource}`
+    ? `${config.baseUrl}${resource}`
+    : undefined;
+}
 export const api = {
   async getSession(fetcher?: typeof fetch): Promise<AppData | null> {
     if (demo) return (await demo).getSession();
@@ -94,6 +105,19 @@ export const api = {
         );
     }
     if (operation === "signOut") http.setCsrfToken();
-    return raw as CommandResult;
+    const result = raw as CommandResult;
+    if (operation === "registerResident") {
+      if (typeof result.resourceId !== "string" || !result.resourceId.trim())
+        throw new ApiError(
+          "The API did not return the saved resident ID",
+          502,
+          "INVALID_RESPONSE",
+        );
+      return {
+        ...result,
+        redirectTo: `/residents/${encodeURIComponent(result.resourceId)}`,
+      };
+    }
+    return result;
   },
 };

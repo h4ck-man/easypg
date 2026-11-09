@@ -1,5 +1,7 @@
 import * as stylex from '@stylexjs/stylex';
 
+const phone = '@media (max-width: 767px)';
+
 export const shell = stylex.create({
   content: {
     maxWidth: 1440,
@@ -8,6 +10,52 @@ export const shell = stylex.create({
     marginInline: 'auto',
     padding: { default: 32, '@media (max-width: 767px)': 16 },
     paddingBottom: 'max(32px, env(safe-area-inset-bottom))'
+  },
+  contentWithShortcuts: {
+    paddingBottom: { default: 'max(32px, env(safe-area-inset-bottom))', [phone]: 'calc(76px + env(safe-area-inset-bottom))' }
+  },
+  shortcuts: {
+    display: { default: 'none', [phone]: 'grid' },
+    gridAutoFlow: 'column',
+    gridAutoColumns: 'minmax(0, 1fr)',
+    position: 'fixed',
+    insetInline: 0,
+    bottom: 0,
+    zIndex: 2,
+    paddingTop: 4,
+    paddingBottom: 'calc(4px + env(safe-area-inset-bottom))',
+    paddingLeft: 'max(8px, env(safe-area-inset-left))',
+    paddingRight: 'max(8px, env(safe-area-inset-right))',
+    gap: 4,
+    borderTop: '1px solid var(--color-border)',
+    backgroundColor: 'var(--color-background-card)'
+  },
+  shortcut: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    minHeight: 48,
+    minWidth: 44,
+    borderRadius: 'var(--radius-element)',
+    textDecoration: 'none',
+    textAlign: 'center',
+    fontSize: 11,
+    lineHeight: 1.1,
+    fontWeight: 600,
+    color: 'var(--color-text-secondary)',
+    outlineOffset: -2,
+    outline: { default: 'none', ':focus-visible': '2px solid var(--color-accent)' }
+  },
+  activeShortcut: {
+    color: 'var(--color-text-primary)',
+    backgroundColor: 'var(--color-background-muted)'
+  },
+  addShortcut: {
+    color: 'var(--color-on-accent)',
+    backgroundColor: 'var(--color-accent)',
+    outlineColor: { default: 'transparent', ':focus-visible': 'var(--color-on-accent)' }
   },
   navigation: { width: 240, height: '100%', backgroundColor: 'var(--color-background-card)' },
   brand: {
@@ -56,7 +104,9 @@ export const shell = stylex.create({
   },
   heading: { minWidth: 0, display: 'flex', alignItems: 'center', gap: 12 },
   breadcrumb: {
-    display: { default: 'inline', '@media (max-width: 1023px)': 'none' },
+    display: { default: 'inline-flex', '@media (max-width: 1023px)': 'none' },
+    minHeight: 44,
+    alignItems: 'center',
     color: 'var(--color-text-secondary)',
     fontSize: 14
   },

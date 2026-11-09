@@ -54,7 +54,7 @@ export const styles = stylex.create({
     maxWidth: '700px'
   },
   codeBadge: { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' },
-  primaryAction: { width: '100%', [tablet]: { width: 'auto' } },
+  primaryAction: { minHeight: 44 },
   filterCard: {
     display: 'flex',
     flexDirection: 'column',
@@ -65,10 +65,10 @@ export const styles = stylex.create({
   filterTabs: {
     display: 'flex',
     gap: 'var(--spacing-2)',
-    overflowX: 'auto',
+    flexWrap: 'wrap',
     paddingBlockEnd: '2px'
   },
-  filterButton: { flex: '0 0 auto', minHeight: '36px' },
+  filterButton: { flex: '0 0 auto', minHeight: 44 },
   selectedFilter: { boxShadow: 'inset 0 0 0 2px var(--color-text-primary)' },
   count: { minWidth: '1.3rem', textAlign: 'center', fontVariantNumeric: 'tabular-nums' },
   empty: {

@@ -94,6 +94,9 @@ export function enhance(
         ["agreedRentRupees", "agreedRentPaise"],
         ["agreedDepositRupees", "agreedDepositPaise"],
         ["amountRupees", "amountPaise"],
+        ["monthlyRentRupees", "monthlyRentPaise"],
+        ["dailyRateRupees", "dailyRatePaise"],
+        ["depositRupees", "depositPaise"],
       ]) {
         if (input[rupees] !== undefined) {
           input[paise] = rupeesToWire(input[rupees]);
@@ -110,8 +113,8 @@ export function enhance(
           ? "/login"
           : operation === "signIn"
             ? safeRedirect(
-                new URL(locationHref()).searchParams.get("redirectTo") ??
-                  undefined,
+                input.portal ? outcome.redirectTo :
+                  new URL(locationHref()).searchParams.get("redirectTo") ?? outcome.redirectTo,
               )
             : outcome.redirectTo;
       result = location

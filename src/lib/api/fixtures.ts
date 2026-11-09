@@ -1,3 +1,4 @@
+import { refreshDemoPortals } from "./demo-portals";
 import type {
   AppData,
   DemoFixtures,
@@ -265,7 +266,7 @@ export function createDemoFixtures(role: Role = "manager"): DemoFixtures {
       },
     ],
   };
-  return {
+  const result = {
     app,
     residentDetails,
     pages: {
@@ -468,5 +469,9 @@ export function createDemoFixtures(role: Role = "manager"): DemoFixtures {
       },
       "/login": { user: null, scope: null },
     },
-  };
+  } as unknown as DemoFixtures;
+  result.pages["/check-ins"].ratePlans.forEach(plan => { plan.billingPeriod = "month"; });
+  result.pages["/check-ins"].ratePlans.push({ id: "demo-daily-plan", roomTypeId: "demo-room-type", name: "Daily shared", occupancyCount: 2, rentPaise: 40000, depositPaise: 40000, billingPeriod: "day" });
+  refreshDemoPortals(result);
+  return result;
 }

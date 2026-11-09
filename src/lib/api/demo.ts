@@ -1,3 +1,4 @@
+import { refreshDemoPortals, checkDemoPortalRead, demoPortalCommand, demoPortalOperations, portalForRole } from "./demo-portals";
 import { createDemoFixtures } from "./fixtures";
 import {
   decodePaise,
@@ -18,7 +19,7 @@ export function createDemoAdapter() {
     string,
     { fingerprint: string; result: CommandResult }
   >();
-  const storageKey = "easypg.frontend.demo.v1";
+  const storageKey = "easypg.frontend.demo.v2";
   try {
     const stored =
       typeof sessionStorage === "undefined"
@@ -109,7 +110,34 @@ export function createDemoAdapter() {
     const residents = Object.values(state.residentDetails).map(
       (detail) => detail.resident,
     );
-    p["/residents"].residents = residents;
+    p["/residents"].residents = residents.map((resident) => {
+      const {
+        id,
+        fullName,
+        phone,
+        email,
+        gender,
+        status,
+        createdAt,
+        roomNumber,
+        bedLabel,
+        agreedRentPaise,
+        startDate,
+      } = resident;
+      return {
+        id,
+        fullName,
+        phone,
+        email,
+        gender,
+        status,
+        createdAt,
+        roomNumber,
+        bedLabel,
+        agreedRentPaise,
+        startDate,
+      };
+    });
     p["/residents"].stats = {
       total: residents.length,
       active: residents.filter((r) => r.status === "active").length,
@@ -347,6 +375,7 @@ export function createDemoAdapter() {
       });
     }
     p["/settings"].scope = state.app.scope;
+    refreshDemoPortals(state);
   };
   return {
     async getSession(): Promise<AppData | null> {
@@ -360,6 +389,7 @@ export function createDemoAdapter() {
         return { user: null, scope: null } as PageDataMap[K];
       const data = current();
       refresh();
+      checkDemoPortalRead(data, route);
       if (route === "/residents/:id") {
         const detail =
           data.residentDetails[params.id ?? params.residentId ?? ""];
@@ -368,6 +398,14 @@ export function createDemoAdapter() {
         return copy(detail) as PageDataMap[K];
       }
       const view = copy(data.pages[route]);
+      if (['/supervisor', '/owner', '/portfolio', '/admin'].includes(route)) {
+        const portal = view as PageDataMap['/supervisor'];
+        const search = (params.search ?? '').toLowerCase().trim();
+        const filtered = portal.hostels.filter(h => !search || `${h.name} ${h.code} ${h.city}`.toLowerCase().includes(search));
+        portal.page = Math.max(1, Number.parseInt(params.page ?? '1', 10) || 1);
+        portal.totalHostels = filtered.length;
+        portal.hostels = filtered.slice((portal.page - 1) * portal.pageSize, portal.page * portal.pageSize);
+      }
       if (route === "/residents") {
         const residents = view as PageDataMap["/residents"];
         residents.filters = {
@@ -396,10 +434,18 @@ export function createDemoAdapter() {
       idempotencyKey: string,
     ): Promise<CommandResult> {
       if (!idempotencyKey) invalid("An idempotency key is required");
-      const fingerprint = JSON.stringify([
-        operation,
-        Object.entries(input).sort(([a], [b]) => a.localeCompare(b)),
-      ]);
+      const digest = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(
+          JSON.stringify([
+            operation,
+            Object.entries(input).sort(([a], [b]) => a.localeCompare(b)),
+          ]),
+        ),
+      );
+      const fingerprint = Array.from(new Uint8Array(digest), (byte) =>
+        byte.toString(16).padStart(2, "0"),
+      ).join("");
       const previous = receipts.get(idempotencyKey);
       if (previous) {
         if (previous.fingerprint !== fingerprint)
@@ -417,6 +463,7 @@ export function createDemoAdapter() {
           const roles: Record<string, Role> = {
             "manager@example.invalid": "manager",
             "owner@example.invalid": "organization_admin",
+            "hostelowner@example.invalid": "property_owner",
             "admin@example.invalid": "platform_admin",
           };
           const role = roles[input.email?.trim().toLowerCase()];
@@ -426,10 +473,11 @@ export function createDemoAdapter() {
               401,
               "INVALID_DEMO_ACCOUNT",
             );
+          if (input.portal && input.portal !== portalForRole(role)) throw new ApiError("This account does not have access to the selected portal", 403, "FORBIDDEN");
           state = createDemoFixtures(role);
           state.app.user.email = input.email.trim().toLowerCase();
           receipts.clear();
-          result.redirectTo = "/dashboard";
+          result.redirectTo = input.portal || role === 'property_owner' ? `/${portalForRole(role)}` : "/dashboard";
         } else if (operation === "signOut") {
           state = null;
           receipts.clear();
@@ -438,7 +486,11 @@ export function createDemoAdapter() {
           const data = current(),
             p = data.pages;
           const rooms = p["/rooms"].floors.flatMap((f) => f.rooms);
-          if (operation === "switchHostel") {
+          if (data.app.scope.role === "property_owner" && operation !== "switchHostel" && operation !== "switchMembership") throw new ApiError("This owner workspace is read-only", 403, "FORBIDDEN");
+          if (data.app.scope.role === 'platform_admin' && ['registerResident', 'checkIn', 'checkOut', 'updateResident', 'recordPayment', 'setBedStatus'].includes(operation)) throw new ApiError('Use an assigned supervisor workspace for resident operations.', 403, 'FORBIDDEN');
+          if (demoPortalOperations.has(operation)) {
+            result = demoPortalCommand(data, operation, input);
+          } else if (operation === "switchHostel") {
             const hostel = p["/hostels"].hostels.find(
               (h) => h.id === input.hostelId,
             );
@@ -488,9 +540,84 @@ export function createDemoAdapter() {
               invalid("Unsupported demo bed status");
             bed.operationalStatus = status;
             bed.status = status === "in_service" ? "available" : "maintenance";
+          } else if (operation === "registerResident") {
+            const name = required(input, "fullName");
+            const phone = required(input, "phone");
+            const expectedHostelId = required(input, "expectedHostelId");
+            if (data.app.scope.activeHostelId !== expectedHostelId)
+              conflict("The active hostel changed. Open a new registration draft.");
+            if (
+              name.length < 2 ||
+              name.length > 120 ||
+              !/^\+?[0-9]{10,15}$/.test(phone.replace(/[ ()-]/g, ""))
+            )
+              invalid("Enter a valid full name and phone number");
+            for (const key of ["portraitImage", "identityImage"]) {
+              const image = required(input, key);
+              if (
+                image.length > 2796227 ||
+                !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(
+                  image,
+                )
+              )
+                invalid("Use a JPEG, PNG or WebP image no larger than 2 MB");
+            }
+            if (
+              Object.values(data.residentDetails).some(
+                ({ resident }) =>
+                  resident.phone.replace(/[ ()-]/g, "") ===
+                  phone.replace(/[ ()-]/g, ""),
+              )
+            )
+              conflict("A resident with this phone number already exists");
+            const id = `demo-resident-${crypto.randomUUID()}`;
+            const createdAt = new Date();
+            data.residentDetails[id] = {
+              resident: {
+                id,
+                fullName: name,
+                phone,
+                email: null,
+                gender: "undisclosed",
+                status: "registered",
+                createdAt,
+                room: null,
+                bed: null,
+                emergencyContactName: null,
+                emergencyContactPhone: null,
+                activeAgreement: null,
+                ratePlan: null,
+              },
+              location: { buildingName: null, floorLabel: null },
+              invoices: [],
+              payments: [],
+              financialSummary: {
+                totalBilledPaise: 0,
+                totalPaidPaise: 0,
+                totalOutstandingPaise: 0,
+              },
+              activityTimeline: [
+                {
+                  id: `demo-event-${crypto.randomUUID()}`,
+                  action: "resident.registered",
+                  entityType: "resident",
+                  createdAt,
+                  metadata: { simulation: true },
+                },
+              ],
+            };
+            result.resourceId = id;
+            result.redirectTo = `/residents/${id}`;
           } else if (operation === "checkIn") {
-            const name = required(input, "fullName"),
-              phone = required(input, "phone"),
+            const existing = input.residentId
+              ? data.residentDetails[input.residentId]
+              : undefined;
+            if (input.residentId && !existing) invalid("Unknown demo resident");
+            if (existing && existing.resident.status !== "registered")
+              conflict("Only a registered resident can be assigned a bed");
+            const name =
+                existing?.resident.fullName ?? required(input, "fullName"),
+              phone = existing?.resident.phone ?? required(input, "phone"),
               start = required(input, "checkInDate");
             const started = date(start);
             const rent = money(input, "agreedRentPaise"),
@@ -510,26 +637,33 @@ export function createDemoAdapter() {
             );
             if (!room || !bed || !plan)
               invalid("Select a room, available bed and matching plan");
+            const period = plan.billingPeriod ?? 'month';
+            const stayKind = period === 'day' ? 'short' : 'long';
+            if (input.stayKind && input.stayKind !== stayKind) invalid('Select a rate matching the stay type.');
             if (bed.status !== "available")
               conflict("That demo bed is no longer available");
             if (input.expectedEndDate && date(input.expectedEndDate) < started)
               invalid("Expected end must follow check-in");
-            const id = `demo-resident-${crypto.randomUUID()}`;
+            const id =
+              existing?.resident.id ?? `demo-resident-${crypto.randomUUID()}`;
             const detail: ResidentPage = {
               resident: {
+                ...existing?.resident,
                 id,
                 fullName: name,
                 phone,
-                email: input.email || null,
-                gender: input.gender || "undisclosed",
+                email: existing ? existing.resident.email : input.email || null,
+                gender: input.gender || existing?.resident.gender || 'undisclosed',
                 status: "active",
-                createdAt: new Date(),
+                createdAt: existing?.resident.createdAt ?? new Date(),
                 roomNumber: room.roomNumber,
                 bedLabel: bed.bedLabel,
                 agreedRentPaise: rent,
                 startDate: start,
-                emergencyContactName: null,
-                emergencyContactPhone: null,
+                emergencyContactName:
+                  existing?.resident.emergencyContactName ?? null,
+                emergencyContactPhone:
+                  existing?.resident.emergencyContactPhone ?? null,
                 room: { id: room.id, roomNumber: room.roomNumber },
                 bed: { id: bed.id, bedLabel: bed.bedLabel },
                 activeAgreement: {
@@ -541,6 +675,11 @@ export function createDemoAdapter() {
                   startDate: start,
                   expectedEndDate: input.expectedEndDate || null,
                   noticePeriodDays: 30,
+                  stayKind,
+                  billingPeriod: period,
+                  departureIntent: input.expectedEndDate ? (input.departureIntent === 'confirmed' ? 'confirmed' : 'tentative') : 'unknown',
+                  followUpDate: input.followUpDate || null,
+                  version: 1,
                 },
                 ratePlan: { id: plan.id, name: plan.name },
               },
@@ -548,12 +687,28 @@ export function createDemoAdapter() {
                 buildingName: room.buildingName,
                 floorLabel: room.floorLabel,
               },
-              invoices: [],
+              invoices: [
+                {
+                  id: `demo-invoice-${crypto.randomUUID()}`,
+                  invoiceNumber: `DEMO-${id.slice(-8)}`,
+                  residentName: name,
+                  residentPhone: phone,
+                  residentId: id,
+                  totalPaise: rent,
+                  paidPaise: 0,
+                  outstandingPaise: rent,
+                  dueDate: start,
+                  issueDate: start,
+                  periodStart: start,
+                  periodEnd: start,
+                  status: "open",
+                },
+              ],
               payments: [],
               financialSummary: {
-                totalBilledPaise: 0,
+                totalBilledPaise: rent,
                 totalPaidPaise: 0,
-                totalOutstandingPaise: 0,
+                totalOutstandingPaise: rent,
               },
               activityTimeline: [
                 {
@@ -563,6 +718,7 @@ export function createDemoAdapter() {
                   createdAt: new Date(),
                   metadata: { simulation: true },
                 },
+                ...(existing?.activityTimeline ?? []),
               ],
             };
             data.residentDetails[id] = detail;

@@ -1,5 +1,14 @@
 /** Business operations. The backend owns authorization, validation and atomicity. */
 export const operations = {
+  switchMembership: { method: "POST", path: "/session/active-membership", resource: false },
+  updateStayPlan: { method: "POST", path: "/stays/departure-plan", resource: false },
+  createInquiry: { method: "POST", path: "/inquiries", resource: false },
+  updateInquiry: { method: "POST", path: "/inquiries/status", resource: false },
+  createHostel: { method: "POST", path: "/hostels", resource: false },
+  configureHostel: { method: "POST", path: "/hostels/settings", resource: false },
+  createStaff: { method: "POST", path: "/staff", resource: false },
+  assignStaff: { method: "POST", path: "/staff/assignments", resource: false },
+  createRoomBatch: { method: "POST", path: "/inventory/rooms", resource: false },
   signIn: { method: "POST", path: "/session", resource: false },
   signOut: { method: "DELETE", path: "/session", resource: false },
   switchHostel: {
@@ -18,6 +27,7 @@ export const operations = {
     resource: false,
   },
   toggleManager: { method: "POST", path: "/staff/access", resource: false },
+  registerResident: { method: "POST", path: "/residents", resource: false },
   checkIn: { method: "POST", path: "/admissions", resource: false },
   checkOut: { method: "POST", path: "/departures", resource: false },
   updateResident: {

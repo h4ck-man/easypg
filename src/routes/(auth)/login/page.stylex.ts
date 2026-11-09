@@ -80,7 +80,14 @@ export const login = stylex.create({
   control: { minHeight: 44 },
   submit: { width: '100%', minHeight: 48 },
   password: { display: 'flex', flexDirection: 'column', gap: 8 },
-  reveal: { alignSelf: 'flex-end', minHeight: 32 },
+  reveal: { alignSelf: 'flex-end', minHeight: 44 },
+  portalList: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 },
+  portalChoice: {
+    display: 'flex', alignItems: 'center', minHeight: 44, paddingInline: 10,
+    borderWidth: 1, borderStyle: 'solid', borderColor: 'var(--color-border)', borderRadius: 'var(--radius-element)',
+    color: 'var(--color-text-primary)', fontSize: 13, textDecoration: 'none'
+  },
+  activeChoice: { borderColor: 'var(--color-accent)', backgroundColor: 'var(--color-background-muted)', fontWeight: 600 },
   demos: {
     display: 'flex',
     flexDirection: 'column',

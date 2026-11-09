@@ -11,6 +11,10 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
+    "test:local": "playwright test --config playwright.local.config.ts",
+    "local:start": "node ../easypg-local-api/scripts/local-runtime.mjs start",
+    "local:status": "node ../easypg-local-api/scripts/local-runtime.mjs status",
+    "local:stop": "node ../easypg-local-api/scripts/local-runtime.mjs stop",
     "verify:boundary": "node scripts/verify-boundary.mjs",
     "test": "pnpm verify:boundary && pnpm check && pnpm test:unit && pnpm build && pnpm test:e2e",
     "contract:generate": "node scripts/generate-contract.mjs && tsx scripts/generate-openapi.ts"

@@ -1,6 +1,6 @@
 <script lang="ts">
   import '../app.css';
-  import { navigating } from '$app/state';
+  import { navigating, page } from '$app/state';
   import { onMount } from 'svelte';
   import { config } from '$lib/api/config';
   import { feedback } from '$lib/api/forms';
@@ -36,10 +36,10 @@
   {#if config.mode === 'demo'}
     <Banner status="info" title="Demo mode" description={navigating.to ? 'Loading workspace…' : 'Synthetic sample data. Changes stay in this browser session and are not saved to a server.'} />
   {:else}
-    <Banner status="info" title="Connected workspace" description={navigating.to ? 'Loading workspace…' : 'Live mode uses your configured EasyPG API.'} />
+    <Banner status="info" title="Live workspace" description={navigating.to ? 'Loading workspace…' : 'Changes are saved to your workspace.'} />
   {/if}
   </section>
-  {#if $feedback?.error || ($feedback?.message && !$feedback?.success)}
+  {#if page.url.pathname !== '/residents/new' && ($feedback?.error || ($feedback?.message && !$feedback?.success))}
     <section aria-live="assertive" aria-label="Request feedback">
       <Banner status="error" title="Request could not be completed" description={$feedback.error || $feedback.message || ''} />
     </section>
