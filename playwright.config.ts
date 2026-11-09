@@ -7,19 +7,19 @@ export default defineConfig({
   timeout: 60000,
   expect: { timeout: 20000 },
   use: {
-    baseURL: "http://127.0.0.1:5180",
+    baseURL: "http://127.0.0.1:5190",
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
   },
   webServer: [
     {
-      command: "pnpm preview",
-      port: 5180,
+      command: "pnpm preview --port 5190",
+      port: 5190,
       reuseExistingServer: !process.env.CI,
     },
     {
-      command: "pnpm dev --port 5181",
-      port: 5181,
+      command: "pnpm dev --port 5191",
+      port: 5191,
       reuseExistingServer: !process.env.CI,
       env: { VITE_API_MODE: "live", VITE_API_BASE_URL: "/api/v1" },
     },

@@ -3,6 +3,10 @@ import * as stylex from '@stylexjs/stylex';
 const tablet = '@media (min-width: 700px)';
 
 export const styles = stylex.create({
+  savedPortrait: { width: 56, height: 56, objectFit: 'cover', borderRadius: '50%', flexShrink: 0 },
+  documentLink: { display: 'inline-flex', alignItems: 'center', minHeight: 44, paddingInline: 8, color: 'var(--color-text-primary)', fontWeight: 600 },
+  touchButton: { minHeight: 44 },
+  fullName: { overflowWrap: 'anywhere' },
   dateField: { display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2)' },
   dateLabel: { color: 'var(--color-text-primary)', fontWeight: 600 },
   dateInput: {

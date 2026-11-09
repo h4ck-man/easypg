@@ -11,6 +11,9 @@ import Settings from '@lucide/svelte/icons/settings';
 import LogIn from '@lucide/svelte/icons/log-in';
 import LogOut from '@lucide/svelte/icons/log-out';
 import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
+import UserPlus from '@lucide/svelte/icons/user-plus';
+import CalendarClock from '@lucide/svelte/icons/calendar-clock';
+import MessageSquare from '@lucide/svelte/icons/message-square';
 
 export const ICON_MAP: Record<string, Component<any>> = {
   'layout-dashboard': LayoutDashboard,
@@ -24,7 +27,10 @@ export const ICON_MAP: Record<string, Component<any>> = {
   'settings': Settings,
   'log-in': LogIn,
   'log-out': LogOut,
-  'more-horizontal': MoreHorizontal
+  'more-horizontal': MoreHorizontal,
+  'calendar-clock': CalendarClock,
+  'message-square': MessageSquare,
+  'user-plus': UserPlus
 };
 
 export function getNavIcon(name: string): Component<any> {

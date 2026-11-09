@@ -1,6 +1,18 @@
 const TIMEZONE = 'Asia/Kolkata';
 const LOCALE = 'en-IN';
 
+/** Date-only value for native date inputs in the operational timezone. */
+export function todayInAppTimezone(): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 /**
  * Format a Date or ISO string as a readable date.
  * Example: '03 Sep 2026'

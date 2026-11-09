@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { roleLabels } from '$lib/constants/permissions';
   import { enhance } from '$lib/api/forms';
   import type { PageData } from './$types';
   import { Avatar, Badge, Button, Card } from '@astryx-svelte/core';
@@ -10,6 +11,9 @@
   import LogOut from '@lucide/svelte/icons/log-out';
 
   let { data }: { data: PageData } = $props();
+  let roleLabel = $derived(roleLabels[data.scope?.role ?? 'resident']);
+  let organizationName = $derived(data.memberships?.find(option => option.id === data.activeMembershipId)?.organizationName);
+  let hostelName = $derived(data.hostels.find(hostel => hostel.id === data.scope?.activeHostelId)?.name);
 </script>
 
 <svelte:head><title>Settings — EasyPG</title></svelte:head>
@@ -25,16 +29,16 @@
     <div {...sx(styles.cardHeader)}>
       <div {...sx(styles.cardTitleLine)}>
         <User size={18} />
-        <h2 {...sx(styles.cardTitle)}>Current Session Profile</h2>
+        <h2 {...sx(styles.cardTitle)}>Profile</h2>
       </div>
-      <p {...sx(styles.cardDescription)}>Current workspace identity and assigned role.</p>
+      <p {...sx(styles.cardDescription)}>Your name, email and current role.</p>
     </div>
     <div {...sx(styles.profile)}>
       <Avatar name={data.user?.name ?? 'User'} alt={data.user?.name ?? 'User'} size="lg" />
       <div {...sx(styles.profileCopy)}>
         <strong {...sx(styles.profileName)}>{data.user?.name}</strong>
         <span {...sx(styles.profileEmail)}>{data.user?.email}</span>
-        <Badge variant="neutral" label={data.scope?.role ?? 'resident'} />
+        <Badge variant="neutral" label={roleLabel} />
       </div>
     </div>
   </Card>
@@ -43,26 +47,26 @@
     <div {...sx(styles.cardHeader)}>
       <div {...sx(styles.cardTitleLine)}>
         <Shield size={18} />
-        <h2 {...sx(styles.cardTitle)}>Access Boundaries &amp; Scopes</h2>
+        <h2 {...sx(styles.cardTitle)}>Workspace access</h2>
       </div>
-      <p {...sx(styles.cardDescription)}>Permissions granted by your active role bindings.</p>
+      <p {...sx(styles.cardDescription)}>The organization and hostel you are working in.</p>
     </div>
     <dl {...sx(styles.details)}>
       <div {...sx(styles.detailRow)}>
-        <dt>Active Role</dt>
-        <dd {...sx(styles.detailValue)}>{data.scope?.role}</dd>
+        <dt>Role</dt>
+        <dd {...sx(styles.detailValue)}>{roleLabel}</dd>
       </div>
       <div {...sx(styles.detailRow)}>
-        <dt>Organization Scope</dt>
-        <dd {...sx(styles.detailValue)}>{data.scope?.organizationId ?? 'Platform Root (Unrestricted)'}</dd>
+        <dt>Organization</dt>
+        <dd {...sx(styles.detailValue)}>{organizationName ?? (data.scope?.role === 'platform_admin' ? 'EasyPG' : 'Current organization')}</dd>
       </div>
       <div {...sx(styles.detailRow)}>
-        <dt>Active Property ID</dt>
-        <dd {...sx(styles.detailValue)}>{data.scope?.activeHostelId ?? 'All Properties'}</dd>
+        <dt>Current hostel</dt>
+        <dd {...sx(styles.detailValue)}>{hostelName ?? 'No hostel selected'}</dd>
       </div>
       <div {...sx(styles.detailRow)}>
-        <dt>Assigned Property Count</dt>
-        <dd {...sx(styles.detailValue)}>{data.scope?.allowedHostelIds?.length ?? 0} Properties</dd>
+        <dt>Available hostels</dt>
+        <dd {...sx(styles.detailValue)}>{data.hostels.length}</dd>
       </div>
     </dl>
   </Card>
@@ -96,9 +100,9 @@
       </div>
     </dl>
     <div {...sx(styles.cardFooter)}>
-      <span {...sx(styles.footerNote)}>EasyPG · SvelteKit frontend</span>
+      <span {...sx(styles.footerNote)}>EasyPG</span>
       <form method="POST" data-operation="signOut" use:enhance>
-        <Button label="Sign Out" variant="destructive" size="sm" type="submit"
+        <Button label="Sign Out" variant="destructive" size="lg" type="submit"
           >{#snippet icon()}<LogOut size={15} />{/snippet}</Button
         >
       </form>

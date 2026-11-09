@@ -36,6 +36,7 @@
   import Receipt from '@lucide/svelte/icons/receipt';
   import TrendingUp from '@lucide/svelte/icons/trending-up';
   import UserCheck from '@lucide/svelte/icons/user-check';
+  import UserPlus from '@lucide/svelte/icons/user-plus';
   import Users from '@lucide/svelte/icons/users';
 
   let { data }: { data: PageData } = $props();
@@ -82,6 +83,7 @@
 {#snippet hostelIcon()}<Home size={16} />{/snippet}
 {#snippet residentIcon()}<Users size={16} />{/snippet}
 {#snippet checkInIcon()}<UserCheck size={16} />{/snippet}
+{#snippet addResidentIcon()}<UserPlus size={16} />{/snippet}
 {#snippet paymentIcon()}<Receipt size={16} />{/snippet}
 {#snippet arrowIcon()}<ArrowRight size={14} />{/snippet}
 
@@ -237,7 +239,10 @@
           {orgData.hostelCount === 1 ? 'hostel' : 'hostels'} and {orgData.totalResidents} active residents.</Text
         >
       </div>
-      <Button label="All hostels" href="/hostels" variant="secondary" icon={hostelIcon} />
+      <div {...sx(styles.organizationActions)}>
+        <Button label="Add resident" href="/residents/new" variant="primary" size="lg" icon={addResidentIcon} />
+        <Button label="All hostels" href="/hostels" variant="secondary" size="lg" icon={hostelIcon} />
+      </div>
     </header>
 
     <section {...sx(styles.metricGrid)} aria-label="Organization metrics">
@@ -394,7 +399,8 @@
           href="/residents"
           variant="secondary"
           icon={residentIcon}
-        /><Button label="Check in" href="/check-ins" variant="primary" icon={checkInIcon} /><Button
+        /><Button label="Add resident" href="/residents/new" variant="primary" size="lg" icon={addResidentIcon} />
+        <Button label="Check in" href="/check-ins" variant="secondary" icon={checkInIcon} /><Button
           label="Record payment"
           href="/payments"
           variant="secondary"
@@ -404,16 +410,18 @@
     </header>
     <section {...sx(styles.mobileActions)} aria-label="Quick actions">
       <Button
-        label="Check in"
-        href="/check-ins"
+        label="Add resident"
+        href="/residents/new"
         variant="primary"
-        icon={checkInIcon}
+        size="lg"
+        icon={addResidentIcon}
         xstyle={styles.fullWidthButton}
       /><Button
-        label="Payments"
-        href="/payments"
+        label="Check in"
+        href="/check-ins"
         variant="secondary"
-        icon={paymentIcon}
+        size="lg"
+        icon={checkInIcon}
         xstyle={styles.fullWidthButton}
       />
     </section>
@@ -436,7 +444,7 @@
       <MetricCard
         label="Active residents"
         value={managerData.activeResidents}
-        description="Registered occupants"
+        description="Currently staying"
         tone="info">{#snippet icon()}<Users size={16} />{/snippet}</MetricCard
       >
       <MetricCard

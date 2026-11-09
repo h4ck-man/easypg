@@ -2,6 +2,7 @@
   import type { PageData } from './$types';
   import { enhance, applyAction, feedback } from '$lib/api/forms';
   import { DEMO_ACCOUNTS } from '$lib/api/demo-identities';
+  import { portalOptions } from '$lib/constants/permissions';
   import { tick, onMount } from 'svelte';
   import { Button, TextInput, Heading, Text, Card, Banner, Badge } from '@astryx-svelte/core';
   import Brand from '$lib/components/app-shell/Brand.svelte';
@@ -15,6 +16,11 @@
 
   let { data }: { data: PageData } = $props();
   let form = $derived($feedback);
+  let selected = $derived(portalOptions.find(option => option.id === data.portal));
+  let demoShortcut = $state('');
+  function portalLink(portal: string) {
+    return '/login?' + new URLSearchParams({ portal });
+  }
   // The component forwards native attributes to its input; preserve browser validation.
   const emailAttributes = { required: true, autocomplete: 'email' };
   const passwordAttributes = { required: true, autocomplete: 'current-password' };
@@ -33,6 +39,7 @@
 
 
   async function fillAndSubmit(demoEmail: string) {
+    demoShortcut = demoEmail;
     email = demoEmail;
     password = 'demo-only';
     await tick();
@@ -40,7 +47,7 @@
   }
 </script>
 
-<svelte:head><title>Sign In — EasyPG Native Astryx</title></svelte:head>
+<svelte:head><title>Sign in — EasyPG</title></svelte:head>
 <div {...sx(login.page)}>
   <header {...sx(login.header)}>
     <Brand />
@@ -85,11 +92,16 @@
     </section>
     <Card xstyle={login.card}>
       <div {...sx(login.titleGroup)}>
-        <p {...sx(login.eyebrow)}>Your workspace awaits</p>
+        <p {...sx(login.eyebrow)}>{selected?.label ?? 'Your workspace awaits'}</p>
         <Heading level={1} xstyle={login.title}>Welcome back.</Heading><Text color="secondary"
-          >Sign in to take care of what matters.</Text
+          >{selected?.detail ?? 'Choose a workspace or sign in with your account.'}</Text
         >
       </div>
+      <nav aria-label="Choose your workspace" {...sx(login.portalList)}>
+        {#each portalOptions as option (option.id)}
+          <a href={portalLink(option.id)} aria-current={data.portal === option.id ? 'page' : undefined} {...sx(login.portalChoice, data.portal === option.id && login.activeChoice)} onclick={() => feedback.set(null)}>{option.label}</a>
+        {/each}
+      </nav>
       {#if form?.error}<Banner
           status="error"
           title="Sign in failed"
@@ -99,7 +111,9 @@
         bind:this={formElement}
         method="POST"
         data-operation="signIn"
-        use:enhance={() => {
+        use:enhance={({ formData }) => {
+          if (demoShortcut) formData.delete('portal');
+          demoShortcut = '';
           isSubmitting = true;
           return async ({ result }) => {
             if (result.type === 'redirect') {
@@ -112,6 +126,7 @@
         }}
         {...sx(login.form)}
       >
+        {#if data.portal}<input type="hidden" name="portal" value={data.portal} />{/if}
         <TextInput
           label="Email address"
           htmlName="email"

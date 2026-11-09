@@ -28,13 +28,18 @@ export const styles = stylex.create({
     flexWrap: 'wrap',
     [medium]: { display: 'flex', justifyContent: 'flex-end' }
   },
+  organizationActions: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 'var(--spacing-2)'
+  },
   mobileActions: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     gap: 'var(--spacing-2)',
     [medium]: { display: 'none' }
   },
-  fullWidthButton: { width: '100%' },
+  fullWidthButton: { width: '100%', minHeight: 44 },
   metricGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',

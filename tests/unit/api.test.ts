@@ -94,20 +94,18 @@ describe("Explicit frontend boundary", () => {
     await expect(http.request("/session")).rejects.toThrow(/No demo data/);
   });
   it("preserves backend conflict status and request details", async () => {
-    const fetcher = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            error: {
-              code: "BED_UNAVAILABLE",
-              message: "Bed is occupied",
-              requestId: "req-1",
-            },
-          }),
-          { status: 409, headers: { "Content-Type": "application/json" } },
-        ),
-      );
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: {
+            code: "BED_UNAVAILABLE",
+            message: "Bed is occupied",
+            requestId: "req-1",
+          },
+        }),
+        { status: 409, headers: { "Content-Type": "application/json" } },
+      ),
+    );
     const http = createHttp(parseConfig("live"), fetcher);
     await expect(http.request("/views/rooms")).rejects.toMatchObject({
       status: 409,
@@ -213,6 +211,115 @@ describe("Demo scenario adapter (not backend enforcement)", () => {
       (await demo.readView("/residents/:id", { id: result.resourceId! }))
         .resident.status,
     ).toBe("checked_out");
+  });
+  it("registers a resident separately from assigning a bed", async () => {
+    const demo = await loggedIn();
+    const before = await demo.readView("/rooms");
+    const image =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aAq0AAAAASUVORK5CYII=";
+    const input = {
+      expectedHostelId: (await demo.getSession())!.scope.activeHostelId!,
+      fullName: "Synthetic Registration",
+      phone: "0000000088",
+      portraitImage: image,
+      identityImage: image,
+    };
+    const registration = await demo.command(
+      "registerResident",
+      input,
+      "registration",
+    );
+    expect(
+      await demo.command("registerResident", input, "registration"),
+    ).toEqual(registration);
+    const id = registration.resourceId!;
+    const profile = await demo.readView("/residents/:id", { id });
+    expect(profile.resident).toMatchObject({
+      fullName: input.fullName,
+      status: "registered",
+      bed: null,
+      activeAgreement: null,
+    });
+    expect(JSON.stringify(profile)).not.toContain(image);
+    expect(profile.invoices).toEqual([]);
+    expect(await demo.readView("/rooms")).toEqual(before);
+    const arrival = await demo.command(
+      "checkIn",
+      {
+        residentId: id,
+        roomId: "demo-room-3",
+        bedId: "demo-bed-3-a",
+        ratePlanId: "demo-rate-plan",
+        agreedRentPaise: "900000",
+        agreedDepositPaise: "1800000",
+        billingDay: "5",
+        checkInDate: "2026-09-20",
+      },
+      "assign-bed",
+    );
+    expect(arrival.resourceId).toBe(id);
+    const admitted = await demo.readView("/residents/:id", { id });
+    expect(admitted.resident).toMatchObject({
+      fullName: input.fullName,
+      status: "active",
+      bed: { id: "demo-bed-3-a" },
+    });
+    expect(admitted.invoices[0].totalPaise).toBe(900000);
+    expect(
+      (await demo.readView("/residents")).residents.filter(
+        (item) => item.phone === input.phone,
+      ),
+    ).toHaveLength(1);
+  });
+  it("rejects a registration draft opened for a different hostel without adding a resident", async () => {
+    const demo = await loggedIn();
+    const before = await demo.readView("/residents");
+    const image =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aAq0AAAAASUVORK5CYII=";
+    await expect(
+      demo.command(
+        "registerResident",
+        {
+          fullName: "Synthetic Stale Draft",
+          phone: "0000000086",
+          portraitImage: image,
+          identityImage: image,
+          expectedHostelId: "different-hostel",
+        },
+        "stale-registration",
+      ),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(await demo.readView("/residents")).toEqual(before);
+  });
+  it("never writes the submitted demo images to session storage", async () => {
+    const storage = {
+      getItem: vi.fn(() => null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    };
+    vi.stubGlobal("sessionStorage", storage);
+    try {
+      const demo = await loggedIn();
+      const encoded =
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aAq0AAAAASUVORK5CYII=";
+      const image = `data:image/png;base64,${encoded}`;
+      await demo.command(
+        "registerResident",
+        {
+          expectedHostelId: (await demo.getSession())!.scope.activeHostelId!,
+          fullName: "Synthetic Storage",
+          phone: "0000000087",
+          portraitImage: image,
+          identityImage: image,
+        },
+        "capture",
+      );
+      const stored = String(storage.setItem.mock.calls.at(-1)?.[1]);
+      expect(stored).toContain("Synthetic Storage");
+      expect(stored).not.toContain(encoded);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
   it("does not mutate occupancy after invalid demo input", async () => {
     const demo = await loggedIn();

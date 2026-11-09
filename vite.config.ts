@@ -2,8 +2,14 @@ import { sveltekit } from "@sveltejs/kit/vite";
 import stylex from "@stylexjs/unplugin";
 import { defineConfig } from "vitest/config";
 export default defineConfig({
-  server: { host: "127.0.0.1", port: 5180, strictPort: true },
-  preview: { host: "127.0.0.1", port: 5180, strictPort: true },
+  server: {
+    host: "127.0.0.1", port: 5180, strictPort: true,
+    proxy: { "/api": { target: "http://127.0.0.1:5188", changeOrigin: false } },
+  },
+  preview: {
+    host: "127.0.0.1", port: 5180, strictPort: true,
+    proxy: { "/api": { target: "http://127.0.0.1:5188", changeOrigin: false } },
+  },
   plugins: [
     ...(process.env.VITEST
       ? []

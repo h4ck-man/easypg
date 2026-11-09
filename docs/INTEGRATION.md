@@ -1,6 +1,6 @@
 # Integration with an independent backend
 
-The frontend is a static SvelteKit SPA. Express/MySQL is an intended external implementation, not included software. This handoff defines browser-facing behavior without prescribing tables, ORM, constraints, transaction design, or an authentication library.
+The frontend is a static SvelteKit SPA. The local PostgreSQL API is independently implemented in `../easypg-local-api`; Express/MySQL or other backends can implement the same interface. This contract defines browser-facing behavior without prescribing tables, ORM, constraints, transaction design, or an authentication library.
 
 ## Source of truth
 
@@ -34,11 +34,11 @@ Do not accept a role, organization, hostel, resident ID, or hidden form field as
 
 View reads use `GET /api/v1/views/<route>`; resident detail uses `GET /api/v1/views/residents/:id`. Supported presentation routes are enumerated in `PageDataMap` in the contract file. Query parameters carry the filters supported by the API client. Treat view payloads as purpose-built screen data, not tables.
 
-The initial pilot returns complete screen collections. Pagination is not yet an agreed capability: do not silently truncate lists. Before introducing pagination, extend the contract, screen behavior, and tests together with explicit cursor/page, limit, and total semantics. Backend-computed summaries must describe the intended entire population rather than accidentally summarize one visible page.
+The four portal views support search and one-based pages of 25 hostel cards, with filtered counts and whole-scope summaries as described in `PORTAL_CONTRACT.md`. Older operational screen collections remain complete and unpaginated: do not silently truncate them. Any additional pagination requires explicit cursor/page, limit, and total semantics in the contract, screen behavior and tests. Backend-computed summaries must describe the intended entire population rather than accidentally summarize one visible page.
 
 ## Business requests
 
-The operation catalog is authoritative for methods and paths. Current names include organization creation/status, staff access, admission, departure, resident profile update, payment recording, bed status, and session operations.
+The operation catalog is authoritative for methods and paths. Current names include organization creation/status, hostel configuration, room batches, staff membership/assignments, admission, departure plans, actual checkout, enquiries, resident profile update, payment recording, bed status, and session operations. See the [four-portal contract](PORTAL_CONTRACT.md) for exact role boundaries, setup fields, reminder semantics and daily/monthly admission behavior.
 
 An admission or payment is one business request. Its backend must perform required validation, current authorization, inventory/financial changes, history, and atomic completion according to its own design. The frontend must not issue a sequence of table-like writes and then claim the operation is atomic.
 
@@ -97,7 +97,15 @@ A small adapter can translate paths, rename fields, and convert wire formats int
 - [ ] Verify 390×844 layouts, keyboard use, and visible failure states against live responses.
 - [ ] Confirm API outages never display synthetic success or demo data.
 
-No live Express/MySQL implementation is certified by this frontend extraction. Record its verification separately using `EVALUATION.md`.
+No Express/MySQL implementation is certified by this frontend extraction. Local PostgreSQL verification is recorded separately in `VERIFICATION.md`; use `EVALUATION.md` for comparisons.
+
+## Quick registration and private images
+
+`registerResident` sends one `POST /api/v1/residents` command with string fields `fullName`, `phone`, `portraitImage`, `identityImage`, and `expectedHostelId`. The last field is a draft-scope precondition, never permission: a changed active property returns 409 before saving. Images use JPEG, PNG, or WebP data URLs, with at most 2 MiB decoded per image. The browser validates and normalizes selected files; the backend independently validates and decodes them before an atomic insert. Request/body and image dimensions are bounded by the backend. Invalid input must not create a partial resident or orphan image. The local backend rejects duplicate normalized phone numbers within the same property with 409.
+
+Registration creates a `registered` profile with no active agreement, bed, rent, invoice, or identity-approval assertion. The API derives hostel and organization scope from the authenticated session. Success uses the existing result envelope and redirects to the new profile. `checkIn` accepts optional `residentId` to admit that existing registered person without duplicating them; all inventory and financial validation remains a single backend admission transaction.
+
+Resident detail may expose `portraitUrl` and `identityDocumentUrl` pointing to authorized `/api/v1/residents/:id/images/portrait` and `/identity` reads. These endpoints must enforce the same resource scope as detail, return the actual validated MIME type, and use `Cache-Control: private, no-store`. List projections never contain identity image bytes or document thumbnails. Demo simulation does not retain captured image bytes in browser storage or its idempotency receipt fingerprints.
 
 ## Concurrency and unsupported capabilities
 

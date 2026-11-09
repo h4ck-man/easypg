@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { createDemoFixtures } from "../../src/lib/api/fixtures";
 import { encodeView } from "../../src/lib/api/transport";
-test.use({ baseURL: "http://127.0.0.1:5181" });
+test.use({ baseURL: "http://127.0.0.1:5191" });
 test("live login has no demo switcher and outage never becomes demo data", async ({
   page,
 }) => {

@@ -1,6 +1,17 @@
 /** Presentation contracts, independently defined; no database or authorization implementation. */
 export type Role =
-  "platform_admin" | "organization_admin" | "manager" | "resident";
+  "platform_admin" | "organization_admin" | "property_owner" | "manager" | "resident";
+export type PortalKind = "supervisor" | "owner" | "portfolio" | "admin";
+export type GenderPolicy = "male" | "female" | "unspecified";
+export type StayKind = "short" | "long";
+export type DepartureIntent = "tentative" | "confirmed" | "unknown";
+export interface MembershipOption {
+  id: string;
+  role: Role;
+  organizationId: string | null;
+  organizationName: string;
+  portal: PortalKind;
+}
 export type AppRole = Role;
 export type OpaqueId = string;
 /** JSON transport: integer paise encoded as a decimal string. */
@@ -39,6 +50,8 @@ export interface AppData {
   user: UserProfile;
   scope: TenantScope;
   hostels: HostelOption[];
+  memberships?: MembershipOption[];
+  activeMembershipId?: string;
 }
 export interface Hostel extends HostelOption {
   organizationId: string;
@@ -46,6 +59,8 @@ export interface Hostel extends HostelOption {
   addressLine1: string;
   status: "active" | "inactive";
   timezone: string;
+  genderPolicy?: GenderPolicy;
+  reminderDays?: number;
 }
 export interface Occupancy {
   physicalBeds: number;
@@ -82,6 +97,7 @@ export interface Manager {
   canManage: boolean;
   hostelName: string;
   orgName: string;
+  assignedHostelIds?: string[];
 }
 export type BedOperationalStatus = "in_service" | "maintenance" | "inactive";
 export type BedEffectiveStatus =
@@ -139,7 +155,14 @@ export interface Floor {
   label: string;
   sortOrder: number;
 }
-export type ResidentStatus = "active" | "checked_out" | "inactive";
+export type ResidentStatus =
+  "registered" | "active" | "checked_out" | "inactive";
+export const residentStatusLabel: Record<ResidentStatus, string> = {
+  registered: "Registered",
+  active: "Active",
+  checked_out: "Checked out",
+  inactive: "Inactive",
+};
 export interface ResidentListItem {
   id: string;
   fullName: string;
@@ -162,8 +185,17 @@ export interface Agreement {
   startDate: string;
   expectedEndDate: string | null;
   noticePeriodDays: number;
+  stayKind?: StayKind;
+  billingPeriod?: "day" | "month";
+  departureIntent?: DepartureIntent;
+  followUpDate?: string | null;
+  lastContactedAt?: Date | null;
+  departureNotes?: string;
+  version?: number;
 }
 export interface ResidentDetail extends ResidentListItem {
+  portraitUrl?: string | null;
+  identityDocumentUrl?: string | null;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
   room: { id: string; roomNumber: string } | null;
@@ -247,6 +279,76 @@ export interface RatePlan {
   occupancyCount: number;
   rentPaise: number;
   depositPaise: number;
+  billingPeriod?: "day" | "month";
+}
+export interface LeavingSoonItem {
+  hostelId: string;
+  hostelName: string;
+  residentId: string;
+  name: string;
+  phone: string;
+  roomNumber: string;
+  bedLabel: string;
+  agreementId: string;
+  stayKind: StayKind;
+  expectedEndDate: string | null;
+  departureIntent: DepartureIntent;
+  followUpDate: string | null;
+  lastContactedAt: Date | null;
+  notes: string;
+  version: number;
+  daysUntilDeparture: number | null;
+  needsFollowUp: boolean;
+  outstandingPaise: number;
+}
+export interface LeavingSoonPage {
+  hostel: Hostel | null;
+  reminderDays: number;
+  today: string;
+  items: LeavingSoonItem[];
+  stats: { dueForFollowUp: number; leavingThisWeek: number; overduePlans: number; outstandingPaise: number };
+}
+export interface AttentionPage { leavingSoon: number; overduePlans: number; dueFollowUps: number; }
+export interface PortalDashboardData {
+  portal: PortalKind;
+  title: string;
+  subtitle: string;
+  hostels: HostelSummary[];
+  organizations: Organization[];
+  stats: { hostelCount: number; residentCount: number; availableBeds: number; leavingSoonCount: number; overdueFollowUps: number; outstandingPaise: number };
+  attention: LeavingSoonItem[];
+  page: number;
+  pageSize: number;
+  totalHostels: number;
+}
+export interface Inquiry {
+  id: string;
+  contactName: string;
+  phone: string | null;
+  source: "phone" | "walk_in";
+  partySize: number;
+  stayKind: StayKind;
+  acPreference: "any" | "ac" | "non_ac";
+  sharingPreference: "any" | "1" | "2" | "3" | "4" | "private";
+  expectedArrival: string | null;
+  expectedDeparture: string | null;
+  followUpDate: string | null;
+  notes: string;
+  status: "open" | "contacted" | "closed";
+  createdAt: Date;
+  version: number;
+}
+export interface InquiriesPage {
+  hostel: Hostel | null;
+  items: Inquiry[];
+  stats: { open: number; followUpsDue: number; availableBeds: number };
+}
+export interface SetupPage {
+  organizations: Organization[];
+  hostels: HostelSummary[];
+  staff: Manager[];
+  allowedRoles: Role[];
+  capabilities: { canCreateOrganization: boolean; canCreateHostel: boolean; canManageStaff: boolean; canConfigureInventory: boolean };
 }
 export interface PlatformDashboardData {
   activeOrganizations: number;
@@ -322,6 +424,14 @@ export interface AgingBucketReport {
   invoices: AgingInvoiceItem[];
 }
 export interface PageDataMap {
+  "/supervisor": PortalDashboardData;
+  "/owner": PortalDashboardData;
+  "/portfolio": PortalDashboardData;
+  "/admin": PortalDashboardData;
+  "/leaving-soon": LeavingSoonPage;
+  "/attention": AttentionPage;
+  "/inquiries": InquiriesPage;
+  "/setup": SetupPage;
   "/dashboard": {
     role: Role;
     platformData: PlatformDashboardData | null;

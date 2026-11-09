@@ -20,20 +20,21 @@
     TextInput
   } from '@astryx-svelte/core';
   import { sx } from '$lib/design/attrs';
-  import { formatDate } from '$lib/formatters/date.js';
+  import { formatDate, todayInAppTimezone } from '$lib/formatters/date.js';
   import { formatPaiseCompact } from '$lib/formatters/money.js';
   import type { PageData } from './$types';
-  import type { ResidentListItem } from '$lib/api/contracts';
+  import { residentStatusLabel, type ResidentListItem } from '$lib/api/contracts';
   import { styles } from './page.stylex';
   import AlertCircle from '@lucide/svelte/icons/alert-circle';
 
   let { data }: { data: PageData } = $props();
+  let canOperate = $derived(data.scope.role === 'manager' || data.scope.role === 'organization_admin');
   let form = $derived($feedback);
   let searchInput = $state('');
   let searchTimeout: ReturnType<typeof setTimeout>;
   let checkOutResident = $state<ResidentListItem | null>(null);
   let isCheckOutOpen = $state(false);
-  let checkOutDate = $state(new Date().toISOString().split('T')[0]);
+  let checkOutDate = $state(todayInAppTimezone());
   let checkOutNotes = $state('');
 
   $effect(() => {
@@ -59,7 +60,7 @@
 
   function openCheckOutDialog(resident: ResidentListItem) {
     checkOutResident = resident;
-    checkOutDate = new Date().toISOString().split('T')[0];
+    checkOutDate = todayInAppTimezone();
     checkOutNotes = '';
     isCheckOutOpen = true;
   }
@@ -81,12 +82,10 @@
         >Manage resident tenancies, contact details, room assignments, and check-outs.</Text
       >
     </div>
-    <Button
-      label="Check in resident"
-      href="/check-ins"
-      variant="primary"
-      xstyle={styles.primaryAction}
-    />
+    {#if canOperate}<div {...sx(styles.actions)}>
+      <Button label="Check in resident" href="/check-ins" variant="secondary" xstyle={styles.primaryAction} />
+      <Button label="Add resident" href="/residents/new" variant="primary" xstyle={styles.primaryAction} />
+    </div>{/if}
   </header>
 
   {#if form?.message && !form?.success}
@@ -123,6 +122,14 @@
         onclick={() => updateFilters('active')}
       />
       <Button
+        label="Registered"
+        size="sm"
+        variant="secondary"
+        xstyle={[styles.filterButton, data.filters.status === 'registered' && styles.selectedFilter]}
+        aria-pressed={data.filters.status === 'registered'}
+        onclick={() => updateFilters('registered')}
+      />
+      <Button
         label={`Checked out (${data.stats.checkedOut})`}
         size="sm"
         variant="secondary"
@@ -146,7 +153,7 @@
           label="Clear filters"
           variant="secondary"
           onclick={() => updateFilters('all', '')}
-        /><Button label="Check in resident" href="/check-ins" variant="primary" />
+        />{#if canOperate}<Button label="Add resident" href="/residents/new" variant="primary" />{/if}
       </div></Card
     >
   {:else}
@@ -167,7 +174,7 @@
           {#each data.residents as resident (resident.id)}
             <TableRow>
               <TableCell
-                ><a href={`/residents/${resident.id}`} {...sx(styles.residentLink)}
+                ><a href={`/residents/${encodeURIComponent(resident.id)}`} {...sx(styles.residentLink)}
                   ><Avatar
                     name={resident.fullName}
                     size="md"
@@ -209,7 +216,7 @@
               >
               <TableCell
                 ><Badge
-                  label={resident.status === 'active' ? 'Active' : 'Checked out'}
+                  label={residentStatusLabel[resident.status]}
                   variant={resident.status === 'active' ? 'success' : 'neutral'}
                 /></TableCell
               >
@@ -217,10 +224,10 @@
                 ><div {...sx(styles.actions)}>
                   <Button
                     label="View"
-                    href={`/residents/${resident.id}`}
+                    href={`/residents/${encodeURIComponent(resident.id)}`}
                     size="sm"
                     variant="secondary"
-                  />{#if resident.status === 'active'}<Button
+                  />{#if canOperate && resident.status === 'active'}<Button
                       label="Check out"
                       size="sm"
                       variant="ghost"
@@ -239,7 +246,7 @@
       {#each data.residents as resident (resident.id)}
         <Card padding={3} xstyle={styles.mobileCard}>
           <div {...sx(styles.mobileTop)}>
-            <a href={`/residents/${resident.id}`} {...sx(styles.residentLink)}
+            <a href={`/residents/${encodeURIComponent(resident.id)}`} {...sx(styles.residentLink)}
               ><Avatar name={resident.fullName} size="md" tooltip={false} /><span
                 {...sx(styles.residentIdentity)}
                 ><strong {...sx(styles.residentName)}>{resident.fullName}</strong><Text
@@ -248,7 +255,7 @@
                 ></span
               ></a
             ><Badge
-              label={resident.status === 'active' ? 'Active' : 'Checked out'}
+              label={residentStatusLabel[resident.status]}
               variant={resident.status === 'active' ? 'success' : 'neutral'}
             />
           </div>
@@ -274,10 +281,10 @@
             <div {...sx(styles.actions)}>
               <Button
                 label="Details"
-                href={`/residents/${resident.id}`}
+                href={`/residents/${encodeURIComponent(resident.id)}`}
                 size="sm"
                 variant="secondary"
-              />{#if resident.status === 'active'}<Button
+              />{#if canOperate && resident.status === 'active'}<Button
                   label="Check out"
                   size="sm"
                   variant="ghost"
@@ -323,8 +330,8 @@
         </div>
       {/if}
       <label {...sx(styles.dateField)}>
-            <span {...sx(styles.dateLabel)}>Check-out date · Required</span>
-            <input type="date" name="checkOutDate" bind:value={checkOutDate} required {...sx(styles.dateInput)} />
+            <span {...sx(styles.dateLabel)}>Check-out date · Required (today or earlier)</span>
+            <input type="date" name="checkOutDate" max={todayInAppTimezone()} bind:value={checkOutDate} required {...sx(styles.dateInput)} />
           </label>
       <TextInput
         label="Notes / reason"

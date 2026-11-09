@@ -16,6 +16,7 @@
   import { styles } from './page.stylex';
 
   let { data }: { data: PageData } = $props();
+  let canOperate = $derived(data.scope.role === 'manager' || data.scope.role === 'organization_admin');
   let searchQuery = $state('');
   let selectedBuildingId = $state('all');
   let selectedFloorId = $state('all');
@@ -413,7 +414,7 @@
                     >Inactive bed</Text
                   >{/if}
               </div>
-              {#if bed.status === 'available'}
+              {#if canOperate && bed.status === 'available'}
                 <form
                   method="POST"
                   data-operation="setBedStatus"
@@ -427,7 +428,7 @@
                     value="maintenance"
                   /><Button label="Set maintenance" type="submit" size="sm" variant="secondary" />
                 </form>
-              {:else if bed.status === 'maintenance'}
+              {:else if canOperate && bed.status === 'maintenance'}
                 <form
                   method="POST"
                   data-operation="setBedStatus"
@@ -454,7 +455,7 @@
         {/if}
       </div>
       <footer {...sx(styles.dialogFooter)}>
-        {#if selectedRoom.status === 'active' && selectedRoom.availableCount > 0}<Button
+        {#if canOperate && selectedRoom.status === 'active' && selectedRoom.availableCount > 0}<Button
             label="Check in to room"
             href={`/check-ins?roomId=${selectedRoom.id}`}
             variant="primary"

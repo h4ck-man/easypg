@@ -1,5 +1,7 @@
 <script lang="ts">
   import { enhance, feedback } from '$lib/api/forms';
+  import { residentImageUrl } from '$lib/api/client';
+  import { residentStatusLabel } from '$lib/api/contracts';
   import {
     Avatar,
     Badge,
@@ -22,8 +24,9 @@
     TextInput
   } from '@astryx-svelte/core';
   import { sx } from '$lib/design/attrs';
+  import StayPlanEditor from '$lib/components/stays/StayPlanEditor.svelte';
   import { tableLayout } from '$lib/design/table.stylex';
-  import { formatDate, formatDateTime, ordinalDay } from '$lib/formatters/date.js';
+  import { formatDate, formatDateTime, ordinalDay, todayInAppTimezone } from '$lib/formatters/date.js';
   import { formatPaise, formatPaiseCompact, paiseToRupees } from '$lib/formatters/money.js';
   import type { PageData } from './$types';
   import { styles } from './page.stylex';
@@ -31,6 +34,12 @@
 
   let { data }: { data: PageData } = $props();
   let form = $derived($feedback);
+  let canEditPlan = $derived(data.scope.role === 'manager' || data.scope.role === 'organization_admin');
+  let readOnly = $derived(!canEditPlan);
+  let portrait = $derived(readOnly ? undefined : residentImageUrl(data.resident.id, 'portrait', data.resident.portraitUrl));
+  let identityDocument = $derived(readOnly ? undefined : residentImageUrl(data.resident.id, 'identity', data.resident.identityDocumentUrl));
+  let brokenPortrait = $state<string>();
+
   let activeTab = $state('overview');
   let isEditDialogOpen = $state(false);
   let isPaymentDialogOpen = $state(false);
@@ -45,7 +54,7 @@
   let editEmail = $state('');
   let editEmergencyName = $state('');
   let editEmergencyPhone = $state('');
-  let checkOutDate = $state(new Date().toISOString().split('T')[0]);
+  let checkOutDate = $state(todayInAppTimezone());
   let checkOutNotes = $state('');
 
   function syncEditFields() {
@@ -124,11 +133,15 @@
 
   <Card padding={5} xstyle={styles.profile}>
     <div {...sx(styles.profileIdentity)}>
-      <Avatar name={data.resident.fullName} size="lg" tooltip={false} />
+      {#if portrait && portrait !== brokenPortrait}
+        <img src={portrait} alt="Resident portrait" referrerpolicy="no-referrer" onerror={() => (brokenPortrait = portrait)} {...sx(styles.savedPortrait)} />
+      {:else}
+        <Avatar name={data.resident.fullName} size="lg" tooltip={false} />
+      {/if}
       <div {...sx(styles.profileCopy)}>
         <div {...sx(styles.profileTitle)}>
-          <Heading level={1} maxLines={1}>{data.resident.fullName}</Heading><Badge
-            label={data.resident.status === 'active' ? 'Active tenancy' : 'Checked out'}
+          <Heading level={1} xstyle={styles.fullName}>{data.resident.fullName}</Heading><Badge
+            label={data.resident.status === 'active' ? 'Active tenancy' : residentStatusLabel[data.resident.status]}
             variant={data.resident.status === 'active' ? 'success' : 'neutral'}
           />
         </div>
@@ -143,20 +156,32 @@
         </div>
       </div>
     </div>
+    {#if !readOnly}
     <div {...sx(styles.profileActions)}>
-      <Button label="Edit profile" variant="secondary" onclick={openEditDialog} />
+      {#if data.resident.status === 'registered'}
+        <Button label="Assign bed" xstyle={styles.touchButton} href={`/check-ins?residentId=${encodeURIComponent(data.resident.id)}`} variant="primary" />
+      {/if}
+      {#if identityDocument}
+        <a href={identityDocument} target="_blank" rel="noopener noreferrer" {...sx(styles.documentLink)}>View identity document</a>
+      {/if}
+      <Button label="Edit profile" xstyle={styles.touchButton} variant="secondary" onclick={openEditDialog} />
       {#if unpaidInvoices.length > 0}<Button
           label="Record payment"
+          xstyle={styles.touchButton}
           variant="primary"
           onclick={() => openPaymentDialog()}
         />{/if}
       {#if data.resident.status === 'active'}<Button
           label="Check out"
           variant="ghost"
-          xstyle={styles.checkoutAction}
-          onclick={() => (isCheckOutDialogOpen = true)}
+          xstyle={[styles.checkoutAction, styles.touchButton]}
+          onclick={() => {
+            checkOutDate = todayInAppTimezone();
+            isCheckOutDialogOpen = true;
+          }}
         />{/if}
     </div>
+    {/if}
   </Card>
 
   <section {...sx(styles.tabs)}>
@@ -209,7 +234,7 @@
                 <dd {...sx(styles.termValue)}>{data.resident.ratePlan?.name ?? 'Standard plan'}</dd>
               </div>
               <div {...sx(styles.term)}>
-                <dt {...sx(styles.termLabel)}>Agreed monthly rent</dt>
+                <dt {...sx(styles.termLabel)}>Agreed {data.resident.activeAgreement.billingPeriod === 'day' ? 'daily' : 'monthly'} rent</dt>
                 <dd {...sx(styles.termValue)}>
                   {formatPaise(data.resident.activeAgreement.agreedRentPaise)}
                 </dd>
@@ -223,7 +248,7 @@
               <div {...sx(styles.term)}>
                 <dt {...sx(styles.termLabel)}>Billing cycle</dt>
                 <dd {...sx(styles.termValue)}>
-                  {ordinalDay(data.resident.activeAgreement.billingDay)} of each month
+                  {#if data.resident.activeAgreement.billingPeriod === 'day'}Per day{:else}{ordinalDay(data.resident.activeAgreement.billingDay)} of each month{/if}
                 </dd>
               </div>
               <div {...sx(styles.term)}>
@@ -237,16 +262,36 @@
                 <dd {...sx(styles.termValue)}>
                   {data.resident.activeAgreement.expectedEndDate
                     ? formatDate(data.resident.activeAgreement.expectedEndDate)
-                    : 'Open-ended'}
+                    : 'Unknown'}
+                  {#if data.resident.activeAgreement.expectedEndDate && data.resident.activeAgreement.departureIntent} · {data.resident.activeAgreement.departureIntent}{/if}
                 </dd>
               </div>
               <div {...sx(styles.term)}>
-                <dt {...sx(styles.termLabel)}>Notice period</dt>
-                <dd {...sx(styles.termValue)}>
-                  {data.resident.activeAgreement.noticePeriodDays} days
-                </dd>
+                <dt {...sx(styles.termLabel)}>Next follow-up</dt>
+                <dd {...sx(styles.termValue)}>{data.resident.activeAgreement.followUpDate ? formatDate(data.resident.activeAgreement.followUpDate) : 'Not scheduled'}</dd>
+              </div>
+              <div {...sx(styles.term)}>
+                <dt {...sx(styles.termLabel)}>Last contacted</dt>
+                <dd {...sx(styles.termValue)}>{data.resident.activeAgreement.lastContactedAt ? formatDateTime(data.resident.activeAgreement.lastContactedAt) : 'Not recorded'}</dd>
               </div>
             </dl>
+            {#if data.resident.activeAgreement.departureNotes}
+              <Text as="p" type="supporting">{data.resident.activeAgreement.departureNotes}</Text>
+            {/if}
+            {#if canEditPlan && data.scope.activeHostelId && data.resident.activeAgreement.version !== undefined}
+              {#key data.resident.activeAgreement.id}
+                <StayPlanEditor
+                  agreementId={data.resident.activeAgreement.id}
+                  residentId={data.resident.id}
+                  hostelId={data.scope.activeHostelId}
+                  version={data.resident.activeAgreement.version}
+                  expectedEndDate={data.resident.activeAgreement.expectedEndDate}
+                  departureIntent={data.resident.activeAgreement.departureIntent ?? (data.resident.activeAgreement.expectedEndDate ? 'tentative' : 'unknown')}
+                  followUpDate={data.resident.activeAgreement.followUpDate ?? null}
+                  notes={data.resident.activeAgreement.departureNotes ?? ''}
+                />
+              {/key}
+            {/if}
           {:else}<Text as="p" type="supporting"
               >No active tenancy agreement found for this resident.</Text
             >{/if}
@@ -283,12 +328,13 @@
                     : 'invoices'}</Text
                 ><Text as="span" type="supporting">Payment is due against the open balance.</Text
                 ></span
-              ><Button
+              >{#if !readOnly}<Button
                 label="Pay now"
                 size="sm"
                 variant="primary"
                 onclick={() => openPaymentDialog()}
-              />{:else}<Text as="span" xstyle={styles.success}>All dues are cleared.</Text>{/if}
+                xstyle={styles.touchButton}
+              />{/if}{:else}<Text as="span" xstyle={styles.success}>All dues are cleared.</Text>{/if}
           </div>
         </Card>
       </div>
@@ -379,12 +425,13 @@
                             : 'info'}
                     /></TableCell
                   ><TableCell
-                    >{#if invoice.outstandingPaise > 0}<Button
+                    >{#if !readOnly && invoice.outstandingPaise > 0}<Button
                         label="Record pay"
                         size="sm"
+                        xstyle={styles.touchButton}
                         variant="secondary"
                         onclick={() => openPaymentDialog(invoice.id)}
-                      />{:else}<Text as="span" type="supporting">Cleared</Text>{/if}</TableCell
+                      />{:else}<Text as="span" type="supporting">{invoice.outstandingPaise > 0 ? '—' : 'Cleared'}</Text>{/if}</TableCell
                   ></TableRow
                 >{/each}</TableBody
             ></Table
@@ -477,6 +524,7 @@
   </section>
 </div>
 
+{#if !readOnly}
 <Dialog
   isOpen={isEditDialogOpen}
   onOpenChange={(open) => (isEditDialogOpen = open)}
@@ -653,8 +701,8 @@
       </div>
     {/if}
     <label {...sx(styles.dateField)}>
-            <span {...sx(styles.dateLabel)}>Check-out date · Required</span>
-            <input type="date" name="checkOutDate" bind:value={checkOutDate} required {...sx(styles.dateInput)} />
+            <span {...sx(styles.dateLabel)}>Check-out date · Required (today or earlier)</span>
+            <input type="date" name="checkOutDate" max={todayInAppTimezone()} bind:value={checkOutDate} required {...sx(styles.dateInput)} />
           </label>
     <TextInput
       label="Reason / notes"
@@ -673,3 +721,5 @@
     </footer>
   </form>
 </Dialog>
+
+{/if}

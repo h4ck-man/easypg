@@ -90,17 +90,32 @@ for (const [route, schema] of Object.entries(
   };
 }
 const fields: Record<string, { required: string[]; optional?: string[] }> = {
-  signIn: { required: ["email", "password"] },
+  signIn: { required: ["email", "password"], optional: ["portal"] },
+  switchMembership: { required: ["membershipId"] },
+  updateStayPlan: { required: ["residentId", "agreementId", "expectedVersion", "expectedHostelId", "departureIntent"], optional: ["expectedEndDate", "followUpDate", "notes", "markContacted"] },
+  createInquiry: { required: ["expectedHostelId", "contactName", "source", "partySize", "stayKind", "acPreference", "sharingPreference"], optional: ["phone", "expectedArrival", "expectedDeparture", "followUpDate", "notes"] },
+  updateInquiry: { required: ["inquiryId", "expectedVersion", "expectedHostelId", "status"], optional: ["followUpDate", "notes"] },
+  createHostel: { required: ["organizationId", "name", "code", "city", "addressLine1", "genderPolicy"], optional: ["reminderDays"] },
+  configureHostel: { required: ["hostelId", "genderPolicy", "reminderDays"] },
+  createStaff: { required: ["name", "email", "role", "organizationId", "hostelIds"], optional: ["initialPassword", "existingAccountId"] },
+  assignStaff: { required: ["bindingId", "hostelIds", "currentHostelIds"] },
+  createRoomBatch: { required: ["hostelId", "buildingName", "floorLabel", "startRoomNumber", "roomCount", "capacity", "acType", "monthlyRentPaise", "dailyRatePaise", "depositPaise"], optional: ["roomPrefix"] },
   signOut: { required: [] },
   switchHostel: { required: ["hostelId"] },
   createOrganization: { required: ["name"], optional: ["slug"] },
   toggleOrganization: { required: ["organizationId", "currentStatus"] },
   toggleManager: { required: ["bindingId", "isActive"] },
-  checkIn: {
+  registerResident: {
     required: [
       "fullName",
       "phone",
-      "gender",
+      "portraitImage",
+      "identityImage",
+      "expectedHostelId",
+    ],
+  },
+  checkIn: {
+    required: [
       "roomId",
       "bedId",
       "ratePlanId",
@@ -109,7 +124,18 @@ const fields: Record<string, { required: string[]; optional?: string[] }> = {
       "billingDay",
       "checkInDate",
     ],
-    optional: ["email", "expectedEndDate"],
+    optional: [
+      "residentId",
+      "fullName",
+      "phone",
+      "gender",
+      "email",
+      "expectedEndDate",
+      "stayKind",
+      "departureIntent",
+      "followUpDate",
+      "expectedHostelId",
+    ],
   },
   checkOut: { required: ["residentId", "checkOutDate"], optional: ["notes"] },
   updateResident: {
@@ -135,6 +161,22 @@ for (const [operation, descriptor] of Object.entries(operations)) {
               description: "Exact integer paise as a decimal string.",
             }
           : {}),
+        ...(name === "expectedHostelId"
+          ? {
+              minLength: 1,
+              description:
+                "Hostel where the draft was opened. A mismatch with the session’s active hostel is a conflict. This field does not grant access.",
+            }
+          : {}),
+        ...(name === "portraitImage" || name === "identityImage"
+          ? {
+              pattern:
+                "^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$",
+              maxLength: 2796227,
+              description:
+                "JPEG, PNG or WebP data URL; decoded image may not exceed 2 MiB.",
+            }
+          : {}),
       },
     ]),
   );
@@ -143,6 +185,24 @@ for (const [operation, descriptor] of Object.entries(operations)) {
     required: field.required,
     properties,
     additionalProperties: false,
+    ...(operation === "checkIn"
+      ? {
+          oneOf: [
+            {
+              required: ["residentId"],
+              not: {
+                anyOf: ["fullName", "phone", "email"].map((name) => ({
+                  required: [name],
+                })),
+              },
+            },
+            {
+              required: ["fullName", "phone", "gender"],
+              not: { required: ["residentId"] },
+            },
+          ],
+        }
+      : {}),
   };
   schemas[operation + "Request"] = requestSchema;
   const parameters: unknown[] = [
@@ -187,7 +247,10 @@ for (const [operation, descriptor] of Object.entries(operations)) {
           content: json(
             envelope({
               type: "object",
-              required: ["success", "message"],
+              required:
+                operation === "registerResident"
+                  ? ["success", "message", "resourceId"]
+                  : ["success", "message"],
               properties: {
                 success: { const: true },
                 message: { type: "string" },
@@ -204,6 +267,7 @@ for (const [operation, descriptor] of Object.entries(operations)) {
         "403": errorResponse,
         "404": errorResponse,
         "409": errorResponse,
+        ...(operation === "registerResident" ? { "413": errorResponse } : {}),
         "422": errorResponse,
         "501": errorResponse,
         "503": errorResponse,
@@ -241,6 +305,32 @@ paths["/session"] = {
     },
   },
 };
+for (const kind of ["portrait", "identity"]) {
+  paths[`/residents/{id}/images/${kind}`] = {
+    get: {
+      operationId: `getResident_${kind}`,
+      description:
+        "Authenticated image read in the active hostel. Send Cache-Control: no-store.",
+      parameters: [
+        { name: "id", in: "path", required: true, schema: { type: "string" } },
+      ],
+      responses: {
+        "200": {
+          description: "Stored resident image.",
+          content: Object.fromEntries(
+            ["image/jpeg", "image/png", "image/webp"].map((type) => [
+              type,
+              { schema: { type: "string", format: "binary" } },
+            ]),
+          ),
+        },
+        "401": errorResponse,
+        "403": errorResponse,
+        "404": errorResponse,
+      },
+    },
+  };
+}
 const document = {
   openapi: "3.1.0",
   info: {
@@ -255,5 +345,5 @@ const document = {
 };
 fs.writeFileSync("docs/openapi.json", JSON.stringify(document, null, 2) + "\n");
 console.log(
-  "Generated OpenAPI: view projections, sessions and 11 business commands.",
+  `Generated OpenAPI: view projections, sessions and ${Object.keys(operations).length} business commands.`,
 );
